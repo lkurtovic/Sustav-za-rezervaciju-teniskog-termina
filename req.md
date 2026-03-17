@@ -39,6 +39,8 @@ US-02 Kao admin, želim moći upravljati terenima i terminima unutar terena.
 ## Funkcijski zahtjevi
   FZ-01 Sustav mora omogućiti adminu kreiranje novog terena.
   FZ-02 Sustav mora omogućiti izmjenu podataka o terenu.
+  FZ-03 Admin mora moći otkazati bilo koju rezervaciju.
+  FZ-04 Sustav mora omogućiti adminu definiranje radnog vremena.
 
   
 
