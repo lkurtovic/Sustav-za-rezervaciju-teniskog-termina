@@ -24,10 +24,10 @@
   FZ-05 Sustav mora omogućiti rezervaciju slobodnog termina.  
   FZ-06 Sustav mora spriječiti dvostruku rezervaciju istog termina.  
 
-  FZ-07 Sustav mora omogućiti adminu kreiranje novog terena.
-  FZ-08 Sustav mora omogućiti adminu izmjenu podataka o terenu.
-  FZ-09 Sustav mora omogućiti adminu otkazivanje bilo koju rezervaciju.
-  FZ-10 Sustav mora omogućiti adminu definiranje radnog vremena terena.
+  FZ-07 Sustav mora omogućiti adminu kreiranje novog terena.  
+  FZ-08 Sustav mora omogućiti adminu izmjenu podataka o terenu.  
+  FZ-09 Sustav mora omogućiti adminu otkazivanje bilo koju rezervaciju.  
+  FZ-10 Sustav mora omogućiti adminu definiranje radnog vremena terena.  
 
 ## Nefunkcijski zahtjevi
   NZ-01 Sustav mora prikazati termine u roku od najviše 2 sekunde za 95% zahtjeva.  
