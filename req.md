@@ -14,8 +14,6 @@
 ## User storyji
 US-01 Kao aktivan tenisač, želim pregledati slobodne termine kako bih mogao rezervirati termin.  
 
-US-02 Kao vlasnik teniskog terena, želim pratiti statistiku korištenja terena.  
-
 ## Funkcijski zahtjevi
   FZ-01 Sustav mora omogućiti pregled slobodnih termina za odabrani datum.  
   FZ-02 Sustav mora omogućiti filtriranje termina po vremenu i terenu.  
@@ -34,6 +32,16 @@ US-02 Kao vlasnik teniskog terena, želim pratiti statistiku korištenja terena.
   NZ-03 Sustav mora sigurno pohranjivati korisničke podatke (lozinke moraju biti hashirane).  
   NZ-04 Sustav mora podržavati najmanje 100 istovremenih korisnika.  
   NZ-05 Sustav mora bilježiti greške u sustavu.  
+
+
+US-02 Kao admin, želim moći upravljati terenima i terminima unutar terena.
+
+## Funkcijski zahtjevi
+  FZ-01 Sustav mora omogućiti adminu kreiranje novog terena.
+  FZ-02 Sustav mora omogućiti izmjenu podataka o terenu.
+
+  
+
 ## Taskovi
   TASK-01 Dizajnirati bazu podataka za korisnike, terene i rezervacije.  
   TASK-02 Implementirati registraciju i prijavu korisnika.  
