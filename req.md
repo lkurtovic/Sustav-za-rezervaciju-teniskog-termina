@@ -12,7 +12,17 @@
 
 # User storyi
  US-01 - Kao aktivan tenisač, želim pregledati slobodne termine kako bih mogao rezervirat termin  
- US-02 - Kao vlasnik teniskog terena, želim pratiti statistiku korištenja terena
+ 
+
+#Funkcijski zahtjevi
+
+#Nefunkcijski zahtjevi
+
+#Taskovi
+
+#Raspodjela zadataka
+
+US-02 - Kao vlasnik teniskog terena, želim pratiti statistiku korištenja terena
 
 #Funkcijski zahtjevi
 
