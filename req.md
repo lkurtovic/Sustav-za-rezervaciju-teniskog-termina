@@ -12,7 +12,7 @@
 - Svi članovi dodani: DA
 
 ## User storyji
-  US-01 Kao aktivan tenisač, želim pregledati slobodne termine kako bih mogao rezervirati termin.   
+  US-01 Kao prijavljeni korisnik, želim pregledati slobodne termine kako bih mogao rezervirati termin.   
   US-02 Kao admin, želim moći upravljati terenima i terminima unutar terena.  
 
 
