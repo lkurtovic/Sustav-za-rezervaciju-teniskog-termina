@@ -1,10 +1,10 @@
 # Projekt: Sustav za rezervaciju teniskog termina
 # Članovi tima: 
--Luka Kurtović
--Ante Galić
--Ivo Janković
--Lucian Vranković
--Lea Babić
+-Luka Kurtović  
+-Ante Galić  
+-Ivo Janković  
+-Lucian Vranković  
+-Lea Babić  
 
 # Github repozitorij
 - Link: https://github.com/lkurtovic/Sustav-za-rezervaciju-teniskog-termina
