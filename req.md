@@ -22,11 +22,11 @@
   FZ-03 Sustav mora omogućiti registraciju korisnika.  
   FZ-04 Sustav mora omogućiti prijavu korisnika.  
   FZ-05 Sustav mora omogućiti rezervaciju slobodnog termina.  
-  FZ-06 Sustav mora spriječiti dvostruku rezervaciju istog termina.  
+  FZ-06 Sustav mora spriječiti dvostruku rezervaciju istog termina. 
 
   FZ-07 Sustav mora omogućiti adminu kreiranje novog terena.  
   FZ-08 Sustav mora omogućiti adminu izmjenu podataka o terenu.  
-  FZ-09 Sustav mora omogućiti adminu otkazivanje bilo koju rezervaciju.  
+  FZ-09 Sustav mora omogućiti adminu otkazivanje bilo koje rezervacije.  
   FZ-10 Sustav mora omogućiti adminu definiranje radnog vremena terena.  
 
 ## Nefunkcijski zahtjevi
@@ -37,7 +37,7 @@
   NZ-05 Sustav mora bilježiti greške u sustavu.  
 
 ## Taskovi
-  TASK-01	Dizajn baze podataka: Izrada sheme za tablice Users, Courts i Reservations s potrebnim relacijama.  
+  TASK-01	Dizajn baze podataka: Izrada sheme za tablice Users, Admins, Courts i Reservations s potrebnim relacijama.  
   TASK-02	Autentifikacija: Implementacija API endpointova za registraciju i prijavu korisnika (BCrypt + JWT).   
   TASK-03	Logika slobodnih slotova: Razvoj algoritma koji generira listu slobodnih termina na temelju radnog vremena i postojećih rezervacija.  
   TASK-04	Frontend Kalendar: Izrada UI sučelja za pregled termina s mogućnošću filtriranja po datumu i terenu.	  
