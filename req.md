@@ -34,7 +34,8 @@
   NZ-02 Sustav mora biti dostupan najmanje 99% vremena.  
   NZ-03 Sustav mora sigurno pohranjivati korisničke podatke (lozinke moraju biti hashirane).  
   NZ-04 Sustav mora podržavati najmanje 100 istovremenih korisnika.  
-  NZ-05 Sustav mora bilježiti greške u sustavu.  
+  NZ-05 Sustav mora bilježiti greške u sustavu.    
+  NZ-06 Sustav mora biti mikroservis i biti kontenjiziran.  
 
 ## Taskovi
   TASK-01	Dizajn baze podataka: Izrada sheme za tablice Users, Admins, Courts i Reservations s potrebnim relacijama.  
@@ -47,10 +48,11 @@
   TASK-08	Admin Kontrola: Implementacija mogućnosti da admin otkaže bilo koju aktivnu rezervaciju (soft delete ili status cancelled).	  
   TASK-09	Konfiguracija radnog vremena: Izrada sustava za definiranje globalnog početka i kraja radnog vremena kluba.   
   TASK-10	Testiranje sustava: Pisanje Unit i Integracijskih testova za ključne procese (validacija termina i prava pristupa).	  
-  TASK-11	Sustav obavijesti: Implementacija slanja potvrde rezervacije (e-mail ili interna notifikacija).	  
+  TASK-11	Sustav obavijesti: Implementacija slanja potvrde rezervacije (e-mail ili interna notifikacija).	 
+  TASK-12 Izrada containera i upravljanje dockerom.
 
 ## Raspodjela zadataka
-  Luka: TASK-01, TASK-02, FZ-03, FZ-04  
+  Luka: TASK-01, TASK-02, TASK-12, FZ-03, FZ-04  
   Ante: TASK-03, TASK-04, FZ-01, FZ-02  
   Ivo: TASK-05, TASK-06, FZ-05, FZ-06  
   Lucian: TASK-07, TASK-08, FZ-07, FZ-08, FZ-09  
