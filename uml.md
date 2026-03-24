@@ -9,7 +9,8 @@
 - Validacija kolizije sprječava dvostruku rezervaciju.
 
 PlantUML Kod:  
-'''
+
+```
 @startuml
 class Korisnik {
   +id: UUID
@@ -74,4 +75,4 @@ Termin "1" --> "1" Teren
 Teren "1" --> "1..*" RadnoVrijeme
 Admin "1" --> "0..*" Teren : upravlja
 @enduml
-'''
+```
