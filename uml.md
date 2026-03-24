@@ -1,3 +1,37 @@
+## 2) Sequence dijagram
+
+**Pitanje:** Kako teče proces rezervacije termina korak po korak?
+
+**Objašnjenje (sažeto):**
+- Korisnik u sučelju (UI) odabire željeni termin.
+- UI šalje zahtjev API-ju za rezervaciju.
+- API provjerava u bazi je li termin dostupan.
+- Ako je termin slobodan, rezervacija se sprema u bazu i korisnik dobiva potvrdu.
+- Ako je termin zauzet, korisniku se prikazuje greška.
+
+**PlantUML kod:**
+
+```plantuml
+@startuml
+actor Korisnik
+participant UI
+participant API
+participant Baza
+
+Korisnik -> UI : odabir termina
+UI -> API : zahtjev za rezervaciju
+API -> Baza : provjera dostupnosti
+
+alt termin slobodan
+    API -> Baza : spremi rezervaciju
+    API --> UI : potvrda
+else termin zauzet
+    API --> UI : greška
+end
+@enduml
+
+
+
 ## 3) Class dijagram
 
 **Pitanje:** Od čega se sustav sastoji i kako su entiteti povezani?
