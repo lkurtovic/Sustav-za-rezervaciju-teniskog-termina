@@ -29,7 +29,7 @@ else termin zauzet
     API --> UI : greška
 end
 @enduml
-
+```
 
 
 ## 3) Class dijagram
