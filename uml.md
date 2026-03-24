@@ -44,7 +44,7 @@ end
 
 PlantUML Kod:  
 
-```
+```plantuml
 @startuml
 class Korisnik {
   +id: UUID
