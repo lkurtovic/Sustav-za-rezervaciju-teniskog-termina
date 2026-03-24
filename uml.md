@@ -68,6 +68,7 @@ A --> UC10
 - API provjerava u bazi je li termin dostupan.
 - Ako je termin slobodan, rezervacija se sprema u bazu i korisnik dobiva potvrdu.
 - Ako je termin zauzet, korisniku se prikazuje greška.
+- UI korisniku prikazuje prikladnu obavijest.
 
 **PlantUML kod:**
 
@@ -85,8 +86,10 @@ API -> Baza : provjera dostupnosti
 alt termin slobodan
     API -> Baza : spremi rezervaciju
     API --> UI : potvrda
+    UI --> Korisnik : prikaz uspješne rezervacije
 else termin zauzet
     API --> UI : greška
+    UI --> Korisnik : obavijest o zauzetosti
 end
 @enduml
 ```
