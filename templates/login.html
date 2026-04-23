@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <title>Prijava</title>
+</head>
+<body class="container" style="max-width: 600px; padding-top: 50px;">
+    <article>
+        <header>
+            <h2>🔑 Prijava</h2>
+        </header>
+        <form hx-post="/token" hx-target="#msg">
+            <label>Korisničko ime <input type="text" name="username" required></label>
+            <label>Lozinka <input type="password" name="password" required></label>
+            <button type="submit" class="contrast">Prijavi se</button>
+        </form>
+        <div id="msg"></div>
+        <footer>
+            Nemaš račun? <a href="/signup">Registriraj se besplatno</a>
+        </footer>
+    </article>
+</body>
+</html>

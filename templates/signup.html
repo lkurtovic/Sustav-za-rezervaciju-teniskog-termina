@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+    <title>Registracija</title>
+</head>
+<body class="container" style="max-width: 600px; padding-top: 50px;">
+    <article>
+        <header>
+            <h2>📝 Registracija</h2>
+        </header>
+        <form hx-post="/register" hx-ext="json-enc" hx-target="#msg">
+            <label>Korisničko ime <input type="text" name="username" required></label>
+            <label>E-mail <input type="email" name="email" required></label>
+            <label>Lozinka <input type="password" name="password" required></label>
+            <button type="submit">Kreiraj račun</button>
+        </form>
+        <div id="msg"></div>
+        <footer>
+            Već imaš račun? <a href="/login">Prijavi se ovdje</a>
+        </footer>
+    </article>
+</body>
+</html>

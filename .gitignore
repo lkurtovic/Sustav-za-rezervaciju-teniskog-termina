@@ -1,0 +1,20 @@
+# Python virtualno okruženje - ovo je tvoj "mjehurić" od par stotina MB
+venv/
+ENV/
+env/
+
+# Privremene Python datoteke
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Baza podataka (Lokalna SQLite baza koju si generirao)
+# Svaki član tima će imati svoju lokalnu bazu za testiranje
+*.db
+*.sqlite3
+
+# Okruženje i tajni ključevi (za TASK-02)
+.env
+
+# VS Code postavke
+.vscode/
