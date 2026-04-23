@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <title>Dashboard | TenisMaster</title>
+    <style>
+        .user-info { text-align: right; font-size: 0.9rem; }
+        .status-card { text-align: center; margin-top: 100px; padding: 50px; }
+        .admin-badge { background: #d32f2f; color: white; padding: 5px 10px; border-radius: 5px; }
+        .user-badge { background: #1976d2; color: white; padding: 5px 10px; border-radius: 5px; }
+    </style>
+</head>
+<body class="container">
+    <nav>
+        <ul>
+            <li><strong>🎾 TenisMaster Dashboard</strong></li>
+        </ul>
+        <ul>
+            <li class="user-info">
+                <strong>{{ username }}</strong><br>
+                {{ email }}
+            </li>
+            <li><a href="/" role="button" class="secondary">Odjava</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <article class="status-card">
+            <h2>Dobrodošli, {{ username }}!</h2>
+            <p>Vaš trenutni status u sustavu je:</p>
+            
+            {% if is_admin %}
+                <span class="admin-badge">ADMINISTRATOR</span>
+                <p style="margin-top:20px;">Imate pristup upravljanju terenima i terminima.</p>
+            {% else %}
+                <span class="user-badge">KORISNIK (IGRAČ)</span>
+                <p style="margin-top:20px;">Možete pregledavati i rezervirati slobodne termine.</p>
+            {% endif %}
+        </article>
+    </main>
+</body>
+</html>
