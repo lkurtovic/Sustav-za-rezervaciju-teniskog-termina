@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <title>Admin Reservations</title>
+</head>
+<body class="container">
+    <nav>
+        <ul>
+            <li><strong>Admin Reservations</strong></li>
+        </ul>
+        <ul>
+            <li>
+                <a href="/dashboard?username={{ admin_user.username }}&email={{ admin_user.email }}&is_admin=true&user_id={{ user_id }}" class="secondary">Dashboard</a>
+            </li>
+        </ul>
+    </nav>
+
+    <main>
+        <section>
+            <h2>Reservations</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User</th>
+                        <th>Court</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in reservations %}
+                        <tr>
+                            <td>{{ item.reservation.id }}</td>
+                            <td>{{ item.user.username }}</td>
+                            <td>{{ item.court.name }}</td>
+                            <td>{{ item.reservation.start_time }}</td>
+                            <td>{{ item.reservation.end_time }}</td>
+                            <td>{{ item.status }}</td>
+                            <td>
+                                {% if item.status != "cancelled" %}
+                                    <form method="post" action="/admin/reservations/{{ item.reservation.id }}/cancel" style="margin:0;">
+                                        <input type="hidden" name="user_id" value="{{ user_id }}">
+                                        <button type="submit" class="contrast">Cancel</button>
+                                    </form>
+                                {% else %}
+                                    <span>Cancelled</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="7">No reservations yet.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+</html>

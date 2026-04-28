@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <title>Admin Courts</title>
+</head>
+<body class="container">
+    <nav>
+        <ul>
+            <li><strong>Admin Courts</strong></li>
+        </ul>
+        <ul>
+            <li>
+                <a href="/dashboard?username={{ admin_user.username }}&email={{ admin_user.email }}&is_admin=true&user_id={{ user_id }}" class="secondary">Dashboard</a>
+            </li>
+        </ul>
+    </nav>
+
+    <main>
+        <section>
+            <h2>Create court</h2>
+            <form method="post" action="/admin/courts">
+                <input type="hidden" name="user_id" value="{{ user_id }}">
+                <label>Name
+                    <input type="text" name="name" required>
+                </label>
+                <label>Surface type
+                    <input type="text" name="surface_type" required>
+                </label>
+                <label>
+                    <input type="checkbox" name="is_active" checked>
+                    Active
+                </label>
+                <button type="submit">Create</button>
+            </form>
+        </section>
+
+        <section>
+            <h2>Courts</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Surface</th>
+                        <th>Active</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for court in courts %}
+                        <tr>
+                            <td>{{ court.id }}</td>
+                            <td>{{ court.name }}</td>
+                            <td>{{ court.surface_type }}</td>
+                            <td>{{ "yes" if court.is_active else "no" }}</td>
+                            <td>
+                                <a href="/admin/courts/{{ court.id }}/edit?user_id={{ user_id }}" role="button" class="secondary">Edit</a>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="5">No courts yet.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+</html>
