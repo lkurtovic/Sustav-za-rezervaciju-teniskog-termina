@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, Field, Relationship
 from typing import List, Optional
 from datetime import datetime
+from enum import Enum
 
 # Osnovni podaci koje dijele svi modeli korisnika
 class UserBase(SQLModel):
@@ -28,11 +29,18 @@ class Court(SQLModel, table=True):
 
     reservations: List["Reservation"] = Relationship(back_populates="court")
 
+class ReservationStatus(str, Enum):
+    active = "active"
+    cancelled = "cancelled"
+    expired = "expired"
+
 # Tablica za rezervacije koja povezuje korisnike i terene (TASK-01)
 class Reservation(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     start_time: datetime
     end_time: datetime
+    status: ReservationStatus = Field(default=ReservationStatus.active, index=True)
+    cancelled_at: Optional[datetime] = None
     
     user_id: int = Field(foreign_key="user.id")
     court_id: int = Field(foreign_key="court.id")

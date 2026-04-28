@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <title>Edit Court</title>
+</head>
+<body class="container">
+    <nav>
+        <ul>
+            <li><strong>Edit Court</strong></li>
+        </ul>
+        <ul>
+            <li>
+                <a href="/admin/courts?user_id={{ user_id }}" class="secondary">Back to courts</a>
+            </li>
+        </ul>
+    </nav>
+
+    <main>
+        <section>
+            <h2>Update court</h2>
+            <form method="post" action="/admin/courts/{{ court.id }}/edit">
+                <input type="hidden" name="user_id" value="{{ user_id }}">
+                <label>Name
+                    <input type="text" name="name" value="{{ court.name }}" required>
+                </label>
+                <label>Surface type
+                    <input type="text" name="surface_type" value="{{ court.surface_type }}" required>
+                </label>
+                <label>
+                    <input type="checkbox" name="is_active" {% if court.is_active %}checked{% endif %}>
+                    Active
+                </label>
+                <button type="submit">Save</button>
+            </form>
+        </section>
+    </main>
+</body>
+</html>

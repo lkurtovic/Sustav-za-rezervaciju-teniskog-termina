@@ -33,6 +33,12 @@
             {% if is_admin %}
                 <span class="admin-badge">ADMINISTRATOR</span>
                 <p style="margin-top:20px;">Imate pristup upravljanju terenima i terminima.</p>
+                {% if user_id %}
+                    <div style="margin-top:20px;">
+                        <a href="/admin/courts?user_id={{ user_id }}" role="button">Manage courts</a>
+                        <a href="/admin/reservations?user_id={{ user_id }}" role="button" class="secondary">Manage reservations</a>
+                    </div>
+                {% endif %}
             {% else %}
                 <span class="user-badge">KORISNIK (IGRAČ)</span>
                 <p style="margin-top:20px;">Možete pregledavati i rezervirati slobodne termine.</p>
