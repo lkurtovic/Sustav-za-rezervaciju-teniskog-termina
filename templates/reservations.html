@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <title>Slobodni termini | TenisMaster</title>
+    <style>
+        /* ---- Grid slotova ---- */
+        .slots-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .slot-card {
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            padding: 0.75rem 0.5rem;
+            text-align: center;
+            font-weight: 600;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .slot-card.free {
+            background: transparent;
+            color: var(--primary);
+            cursor: pointer;
+        }
+
+        .slot-card.free:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .slot-card.taken {
+            border-color: #aaa;
+            background: #f0f0f0;
+            color: #999;
+            text-decoration: line-through;
+            cursor: not-allowed;
+        }
+
+        /* tamna tema */
+        @media (prefers-color-scheme: dark) {
+            .slot-card.taken {
+                background: #333;
+                color: #666;
+                border-color: #555;
+            }
+        }
+
+        .slot-time { font-size: 1rem; }
+        .slot-label { font-size: 0.7rem; margin-top: 4px; }
+
+        /* ---- Filter forma ---- */
+        .filter-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 1rem;
+            align-items: end;
+        }
+
+        @media (max-width: 600px) {
+            .filter-grid { grid-template-columns: 1fr; }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--muted-color);
+        }
+        .empty-state .icon { font-size: 3rem; }
+
+        /* nav desna strana */
+        .user-info { font-size: 0.85rem; text-align: right; }
+    </style>
+</head>
+<body class="container">
+
+    <!-- NAVIGACIJA -->
+    <nav>
+        <ul>
+            <li><strong>🎾 TenisMaster</strong></li>
+        </ul>
+        <ul>
+            <li class="user-info">
+                <strong>{{ username }}</strong><br>{{ email }}
+            </li>
+            <li>
+                <a href="/dashboard?username={{ username }}&email={{ email }}&is_admin={{ is_admin }}&user_id={{ user_id }}"
+                   role="button" class="secondary outline">Dashboard</a>
+            </li>
+        </ul>
+    </nav>
+
+    <main>
+        <hgroup>
+            <h2>📅 Slobodni termini</h2>
+            <p>Odaberi datum i teren da vidiš raspoložive sate.</p>
+        </hgroup>
+
+        <!-- ====================================================
+             FILTERI (FZ-02)
+             ==================================================== -->
+        <article>
+            <form method="get" action="/reservations">
+                <!-- Prosljeđujemo user podatke kroz URL -->
+                <input type="hidden" name="username"  value="{{ username }}">
+                <input type="hidden" name="email"     value="{{ email }}">
+                <input type="hidden" name="user_id"   value="{{ user_id }}">
+                <input type="hidden" name="is_admin"  value="{{ is_admin }}">
+
+                <div class="filter-grid">
+                    <!-- Filter po datumu -->
+                    <label>
+                        Datum
+                        <input
+                            type="date"
+                            name="date_filter"
+                            value="{{ target_date }}"
+                            min="{{ target_date }}"
+                            required>
+                    </label>
+
+                    <!-- Filter po terenu -->
+                    <label>
+                        Teren
+                        <select name="court_filter" required>
+                            <option value="" disabled {% if not court_filter %}selected{% endif %}>
+                                — odaberi teren —
+                            </option>
+                            {% for court in courts %}
+                                <option value="{{ court.id }}"
+                                    {% if court_filter == court.id %}selected{% endif %}>
+                                    {{ court.name }} ({{ court.surface_type }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </label>
+
+                    <!-- Gumb za pretragu -->
+                    <div>
+                        <button type="submit">🔍 Prikaži termine</button>
+                    </div>
+                </div>
+            </form>
+        </article>
+
+        <!-- ====================================================
+             PRIKAZ SLOTOVA (FZ-01)
+             ==================================================== -->
+        {% if slots %}
+            <section>
+                <h3>
+                    Termini za
+                    <strong>{{ selected_court.name }}</strong>
+                    — {{ target_date }}
+                </h3>
+
+                <div class="slots-grid">
+                    {% for slot in slots %}
+                        {% if slot.free %}
+                            <!-- Slobodan slot — linkamo na rezervaciju (Ivo će implementirati POST) -->
+                            <a
+                                href="/reserve?court_id={{ court_filter }}&start={{ slot.start.strftime('%Y-%m-%dT%H:%M') }}&end={{ slot.end.strftime('%Y-%m-%dT%H:%M') }}&user_id={{ user_id }}&username={{ username }}&email={{ email }}"
+                                class="slot-card free"
+                                style="text-decoration:none;">
+                                <div class="slot-time">
+                                    {{ slot.start.strftime('%H:%M') }} – {{ slot.end.strftime('%H:%M') }}
+                                </div>
+                                <div class="slot-label">✅ slobodno</div>
+                            </a>
+                        {% else %}
+                            <div class="slot-card taken">
+                                <div class="slot-time">
+                                    {{ slot.start.strftime('%H:%M') }} – {{ slot.end.strftime('%H:%M') }}
+                                </div>
+                                <div class="slot-label">❌ zauzeto</div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <!-- Legenda -->
+                <small style="display:block; margin-top:1rem; color:var(--muted-color);">
+                    ✅ Slobodni termini su klikabilni. ❌ Zauzeti termini nisu dostupni za rezervaciju.
+                </small>
+            </section>
+
+        {% elif court_filter %}
+            <!-- Teren odabran ali nema slotova (ne bi trebalo biti, ali sigurnost) -->
+            <div class="empty-state">
+                <div class="icon">🎾</div>
+                <p>Nema podataka o terminima za ovaj teren.</p>
+            </div>
+
+        {% else %}
+            <!-- Teren još nije odabran -->
+            <div class="empty-state">
+                <div class="icon">👆</div>
+                <p>Odaberi datum i teren pa klikni <strong>Prikaži termine</strong>.</p>
+            </div>
+        {% endif %}
+    </main>
+
+</body>
+</html>
