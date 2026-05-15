@@ -20,6 +20,15 @@ templates = Jinja2Templates(directory="templates")
 def on_startup():
     create_db_and_tables()
     ensure_schema()
+    with Session(engine) as session:
+        if not session.exec(select(models.Court)).first():
+            court = models.Court(
+                name="Centralni teren",
+                surface_type="zemlja",
+                is_active=True
+            )
+            session.add(court)
+            session.commit()
 
 def require_admin(user_id: Optional[int], session: Session) -> models.User:
     if user_id is None:
@@ -127,6 +136,83 @@ def login(
 def logout():
     """Vraća korisnika na početnu."""
     return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
+
+# --- REZERVACIJE ---
+
+@app.post("/reservations")
+def create_reservation(
+    reservation_data: models.ReservationCreate,
+    session: Session = Depends(get_session)
+):
+    """
+    TASK-05: Kreiranje rezervacije
+    TASK-06: Validacija preklapanja termina
+    """
+
+    # Provjera postoji li korisnik
+    user = session.get(models.User, reservation_data.user_id)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found."
+        )
+
+    # Provjera postoji li teren
+    court = session.get(models.Court, reservation_data.court_id)
+    if not court:
+        raise HTTPException(
+            status_code=404,
+            detail="Court not found."
+        )
+
+    # Provjera vremena
+    if reservation_data.start_time >= reservation_data.end_time:
+        raise HTTPException(
+            status_code=400,
+            detail="End time must be after start time."
+        )
+
+    # Ne dopuštaj rezervacije u prošlosti
+    if reservation_data.start_time < datetime.utcnow():
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot reserve a past time slot."
+        )
+
+    # TASK-06: Provjera preklapanja termina
+    overlapping_reservation = session.exec(
+        select(models.Reservation).where(
+            models.Reservation.court_id == reservation_data.court_id,
+            models.Reservation.status == models.ReservationStatus.active,
+            models.Reservation.start_time < reservation_data.end_time,
+            models.Reservation.end_time > reservation_data.start_time
+        )
+    ).first()
+
+    # Ako postoji preklapanje -> zabrani rezervaciju
+    if overlapping_reservation:
+        raise HTTPException(
+            status_code=409,
+            detail="This time slot is already reserved."
+        )
+
+    # Kreiranje rezervacije
+    new_reservation = models.Reservation(
+        start_time=reservation_data.start_time,
+        end_time=reservation_data.end_time,
+        user_id=reservation_data.user_id,
+        court_id=reservation_data.court_id,
+        status=models.ReservationStatus.active
+    )
+
+    session.add(new_reservation)
+    session.commit()
+    session.refresh(new_reservation)
+
+    return {
+        "message": "Reservation created successfully.",
+        "reservation": new_reservation
+    }
 
 # --- ADMIN: TERENI ---
 
