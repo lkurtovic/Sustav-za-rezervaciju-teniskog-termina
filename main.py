@@ -276,3 +276,128 @@ def cancel_reservation(
         url=f"/admin/reservations?user_id={user_id}",
         status_code=status.HTTP_303_SEE_OTHER
     )
+
+    # ================================================================
+# ANTE GALIĆ — TASK-03, TASK-04 | FZ-01, FZ-02
+# Dodaj ove rute u main.py
+# ================================================================
+
+from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.responses import HTMLResponse
+from sqlmodel import Session, select
+from typing import Optional
+from datetime import datetime, date, timedelta
+
+# ----------------------------------------------------------------
+# POMOĆNA FUNKCIJA: Generira listu slobodnih 1-satnih termina
+# za određeni dan i teren (TASK-03 / FZ-01)
+# ----------------------------------------------------------------
+
+def get_free_slots(
+    court_id: int,
+    target_date: date,
+    session: Session,
+    slot_duration_minutes: int = 60,
+    open_hour: int = 8,
+    close_hour: int = 22,
+) -> list[dict]:
+    """
+    FZ-01 / TASK-03:
+    Generira sve moguće termine (slotove) za zadani datum i teren,
+    a zatim izbacuje one koji se preklapaju s postojećim rezervacijama.
+
+    Vraća listu rječnika oblika:
+        {"start": datetime, "end": datetime, "free": bool}
+    """
+    # --- Postavljanje granica radnog vremena ---
+    day_start = datetime(target_date.year, target_date.month, target_date.day, open_hour, 0)
+    day_end   = datetime(target_date.year, target_date.month, target_date.day, close_hour, 0)
+    slot_delta = timedelta(minutes=slot_duration_minutes)
+
+    # --- Dohvati sve aktivne rezervacije za taj teren i datum ---
+    stmt = select(models.Reservation).where(
+        models.Reservation.court_id == court_id,
+        models.Reservation.status   == models.ReservationStatus.active,
+        models.Reservation.start_time >= day_start,
+        models.Reservation.start_time <  day_end,
+    )
+    existing: list[models.Reservation] = session.exec(stmt).all()
+
+    # --- Generiraj sve slotove i označi slobodne/zauzete ---
+    slots = []
+    current = day_start
+    while current + slot_delta <= day_end:
+        slot_end = current + slot_delta
+        # Provjeri preklapanje s postojećim rezervacijama
+        is_taken = any(
+            r.start_time < slot_end and r.end_time > current
+            for r in existing
+        )
+        slots.append({
+            "start": current,
+            "end":   slot_end,
+            "free":  not is_taken,
+        })
+        current = slot_end
+
+    return slots
+
+
+@app.get("/reservations", response_class=HTMLResponse)
+def reservations_page(
+    request: Request,
+    username: str        = "Gost",
+    email: str           = "nepoznato",
+    user_id: Optional[int] = None,
+    is_admin: bool       = False,
+    # Filteri (FZ-02)
+    date_filter: Optional[str] = None,   # npr. "2025-06-15"
+    court_filter: Optional[int] = None,
+    session: Session     = Depends(get_session),
+):
+    """
+    FZ-01: Prikazuje slobodne termine za odabrani datum.
+    FZ-02: Podržava filtriranje po datumu i terenu.
+    """
+
+    # --- Dohvati sve aktivne terene za filter dropdown ---
+    courts = session.exec(
+        select(models.Court)
+        .where(models.Court.is_active == True)
+        .order_by(models.Court.id)
+    ).all()
+
+    # --- Odredi datum (zadano: danas) ---
+    if date_filter:
+        try:
+            target_date = date.fromisoformat(date_filter)
+        except ValueError:
+            target_date = date.today()
+    else:
+        target_date = date.today()
+
+    # --- Dohvati slotove samo ako je teren odabran ---
+    slots        = []
+    selected_court = None
+
+    if court_filter and courts:
+        selected_court = next((c for c in courts if c.id == court_filter), None)
+        if selected_court:
+            slots = get_free_slots(court_filter, target_date, session)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="reservations.html",
+        context={
+            "request":        request,
+            "username":       username,
+            "email":          email,
+            "user_id":        user_id,
+            "is_admin":       is_admin,
+            "courts":         courts,
+            "slots":          slots,
+            "target_date":    target_date.isoformat(),
+            "court_filter":   court_filter,
+            "selected_court": selected_court,
+        },
+    )

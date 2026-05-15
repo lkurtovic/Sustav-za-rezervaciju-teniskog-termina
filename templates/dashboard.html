@@ -40,9 +40,15 @@
                     </div>
                 {% endif %}
             {% else %}
-                <span class="user-badge">KORISNIK (IGRAČ)</span>
-                <p style="margin-top:20px;">Možete pregledavati i rezervirati slobodne termine.</p>
-            {% endif %}
+    <span class="user-badge">KORISNIK (IGRAČ)</span>
+    <p style="margin-top:20px;">Možete pregledavati i rezervirati slobodne termine.</p>
+    {% if user_id %}
+    <div style="margin-top:20px;">
+        <a href="/reservations?username={{ username }}&email={{ email }}&user_id={{ user_id }}&is_admin={{ is_admin }}"
+           role="button">📅 Pregledaj termine</a>
+    </div>
+    {% endif %}
+{% endif %}
         </article>
     </main>
 </body>
