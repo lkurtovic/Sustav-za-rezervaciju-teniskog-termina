@@ -47,3 +47,10 @@ class Reservation(SQLModel, table=True):
 
     user: User = Relationship(back_populates="reservations")
     court: Court = Relationship(back_populates="reservations")
+
+# Model za kreiranje rezervacije (TASK-05)
+class ReservationCreate(SQLModel):
+    start_time: datetime
+    end_time: datetime
+    user_id: int
+    court_id: int
