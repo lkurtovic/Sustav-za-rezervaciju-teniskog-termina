@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
@@ -214,6 +214,75 @@ def create_reservation(
         "reservation": new_reservation
     }
 
+
+@app.post("/reservations/submit")
+def create_reservation_from_form(
+    user_id: int = Form(...),
+    court_id: int = Form(...),
+    start_time: str = Form(...),
+    end_time: str = Form(...),
+    username: str = Form("Gost"),
+    email: str = Form("nepoznato"),
+    is_admin: bool = Form(False),
+    session: Session = Depends(get_session)
+):
+    """
+    Prihvaća zahtjev za rezervaciju direktno s frontenda,
+    izvršava validaciju i vraća tekstualni status za JS modal.
+    """
+    # Pretvaranje stringova iz HTML-a natrag u datetime objekte
+    try:
+        start_dt = datetime.fromisoformat(start_time)
+        end_dt = datetime.fromisoformat(end_time)
+    except ValueError:
+        return PlainTextResponse("Nevažeći format datuma i vremena!", status_code=400)
+
+    # 1. Provjera postoji li korisnik
+    user = session.get(models.User, user_id)
+    if not user:
+        return PlainTextResponse("Korisnik nije pronađen u bazi.", status_code=404)
+
+    # 2. Provjera postoji li teren
+    court = session.get(models.Court, court_id)
+    if not court:
+        return PlainTextResponse("Teren nije pronađen u bazi.", status_code=404)
+
+    # 3. Provjera vremena
+    if start_dt >= end_dt:
+        return PlainTextResponse("Krajnje vrijeme mora biti nakon početnog vremena.", status_code=400)
+
+    # 4. Ne dopuštaj rezervacije u prošlosti
+    if start_dt < datetime.utcnow():
+        return PlainTextResponse("Nije moguće rezervirati termin u prošlosti.", status_code=400)
+
+    # 5. Provjera preklapanja termina
+    overlapping_reservation = session.exec(
+        select(models.Reservation).where(
+            models.Reservation.court_id == court_id,
+            models.Reservation.status == models.ReservationStatus.active,
+            models.Reservation.start_time < end_dt,
+            models.Reservation.end_time > start_dt
+        )
+    ).first()
+
+    # AKO JE ZAUZETO: Vraćamo grešku 409 što JS odmah prepoznaje i ispisuje upozorenje
+    if overlapping_reservation:
+        return PlainTextResponse("Ovaj termin je u međuvremenu već rezerviran!", status_code=409)
+
+    # 6. Kreiranje rezervacije u bazi
+    new_reservation = models.Reservation(
+        start_time=start_dt,
+        end_time=end_dt,
+        user_id=user_id,
+        court_id=court_id,
+        status=models.ReservationStatus.active
+    )
+
+    session.add(new_reservation)
+    session.commit()
+
+    # AKO JE USPJEŠNO: Vraćamo čisti "OK" sa statusom 200, što aktivira zeleni prozorčić na svijetli dio modala!
+    return PlainTextResponse("OK", status_code=200)
 # --- ADMIN: TERENI ---
 
 @app.get("/admin/courts", response_class=HTMLResponse)
@@ -368,9 +437,7 @@ def cancel_reservation(
 # Dodaj ove rute u main.py
 # ================================================================
 
-from fastapi import FastAPI, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse
-from sqlmodel import Session, select
+
 from typing import Optional
 from datetime import datetime, date, timedelta
 
