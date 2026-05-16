@@ -4,28 +4,52 @@ from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
 from typing import Annotated, Optional
-from datetime import datetime
+from datetime import datetime, date, timedelta
 
-# Uvoz tvojih modula
+# NOVO - TASK-11: Uvoz za slanje pravih e-mailova
+from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
+
+# Uvoz tvojih lokalnih modula za bazu i autentifikaciju
 from database import engine, get_session, create_db_and_tables, ensure_schema
 import models
 import auth
 
 app = FastAPI(title="Tenis Rezervacije v1.0")
 
-# Postavljanje Jinja2 predložaka
+# Postavljanje Jinja2 predložaka za HTML stranice
 templates = Jinja2Templates(directory="templates")
+
+
+# ================================================================
+# TASK-11: KONFIGURACIJA ZA PRAVO SLANJE E-MAILA (SMTP)
+# ================================================================
+# Prilagodite ove podatke Vašem SMTP poslužitelju (npr. Gmail, Mailtrap, Outlook...)
+mail_conf = ConnectionConfig(
+    MAIL_USERNAME="luka0kurtovic@gmail.com",       # npr. tvoj e-mail ili Mailtrap korisničko ime
+    MAIL_PASSWORD="qtjshwdyuwyifdby",  # npr. Gmail App Password ili Mailtrap lozinka
+    MAIL_FROM="luka0kurtovic@gmail.com",
+    MAIL_PORT=587,                                 # TLS port (najčešće 587, ili 465 za SSL)
+    MAIL_SERVER="smtp.gmail.com",                # npr. smtp.gmail.com ili sandbox.smtp.mailtrap.io
+    MAIL_STARTTLS=True,
+    MAIL_SSL_TLS=False,
+    USE_CREDENTIALS=True,
+    VALIDATE_CERTS=True
+)
+
 
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
     ensure_schema()
     with Session(engine) as session:
+        # Inicijalno dodavanje terena ako baza ima praznu tablicu
         if not session.exec(select(models.Court)).first():
             court = models.Court(
                 name="Centralni teren",
                 surface_type="zemlja",
-                is_active=True
+                is_active=True,
+                open_hour=8,
+                close_hour=22
             )
             session.add(court)
             session.commit()
@@ -42,17 +66,17 @@ def require_admin(user_id: Optional[int], session: Session) -> models.User:
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    """Landing page."""
+    """Početna (Landing) stranica."""
     return templates.TemplateResponse(request=request, name="index.html")
 
 @app.get("/signup", response_class=HTMLResponse)
 def signup_page(request: Request):
-    """Stranica za registraciju."""
+    """Stranica za registraciju novih korisnika."""
     return templates.TemplateResponse(request=request, name="signup.html")
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    """Stranica za prijavu."""
+    """Stranica za prijavu korisnika."""
     return templates.TemplateResponse(request=request, name="login.html")
 
 @app.get("/dashboard", response_class=HTMLResponse)
@@ -63,10 +87,7 @@ def dashboard(
     is_admin: bool = False,
     user_id: Optional[int] = None
 ):
-    """
-    Glavna stranica nakon prijave.
-    Prima podatke o korisniku i prikazuje ih.
-    """
+    """Glavna upravljačka ploča nakon uspješne prijave."""
     return templates.TemplateResponse(
         request=request, 
         name="dashboard.html", 
@@ -83,7 +104,7 @@ def dashboard(
 
 @app.post("/register")
 def register(user_data: models.UserCreate, session: Session = Depends(get_session)):
-    """FZ-03: Registracija i preusmjeravanje na login."""
+    """Obrada registracije i provjera jedinstvenosti korisničkog imena."""
     statement = select(models.User).where(models.User.username == user_data.username)
     if session.exec(statement).first():
         return HTMLResponse(
@@ -100,7 +121,6 @@ def register(user_data: models.UserCreate, session: Session = Depends(get_sessio
     session.add(new_user)
     session.commit()
     
-    # Automatski prebaci na login nakon 1 sekunde
     return HTMLResponse(
         "<p style='color:green;'>Registracija uspješna! Idemo na prijavu...</p>"
         "<script>setTimeout(() => { window.location.href = '/login'; }, 1000);</script>"
@@ -111,7 +131,7 @@ def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()], 
     session: Session = Depends(get_session)
 ):
-    """FZ-04: Prijava i preusmjeravanje na Dashboard s podacima."""
+    """Provjera vjerodajnica i prijava korisnika uz preusmjeravanje."""
     statement = select(models.User).where(models.User.username == form_data.username)
     user = session.exec(statement).first()
     
@@ -121,8 +141,6 @@ def login(
             status_code=401
         )
     
-    # Generiranje URL-a s parametrima za prikaz na dashboardu
-    # (Kasnije ćemo ovo zamijeniti sigurnijim Cookie/JWT sustavom)
     target_url = (
         f"/dashboard?username={user.username}&email={user.email}"
         f"&is_admin={user.is_admin}&user_id={user.id}"
@@ -130,93 +148,17 @@ def login(
     
     return HTMLResponse(f"<script>window.location.href='{target_url}';</script>")
 
-# --- POMOĆNE RUTE ---
-
 @app.get("/logout")
 def logout():
-    """Vraća korisnika na početnu."""
+    """Odjava korisnika."""
     return RedirectResponse(url="/", status_code=status.HTTP_302_FOUND)
 
-# --- REZERVACIJE ---
 
-@app.post("/reservations")
-def create_reservation(
-    reservation_data: models.ReservationCreate,
-    session: Session = Depends(get_session)
-):
-    """
-    TASK-05: Kreiranje rezervacije
-    TASK-06: Validacija preklapanja termina
-    """
-
-    # Provjera postoji li korisnik
-    user = session.get(models.User, reservation_data.user_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found."
-        )
-
-    # Provjera postoji li teren
-    court = session.get(models.Court, reservation_data.court_id)
-    if not court:
-        raise HTTPException(
-            status_code=404,
-            detail="Court not found."
-        )
-
-    # Provjera vremena
-    if reservation_data.start_time >= reservation_data.end_time:
-        raise HTTPException(
-            status_code=400,
-            detail="End time must be after start time."
-        )
-
-    # Ne dopuštaj rezervacije u prošlosti
-    if reservation_data.start_time < datetime.utcnow():
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot reserve a past time slot."
-        )
-
-    # TASK-06: Provjera preklapanja termina
-    overlapping_reservation = session.exec(
-        select(models.Reservation).where(
-            models.Reservation.court_id == reservation_data.court_id,
-            models.Reservation.status == models.ReservationStatus.active,
-            models.Reservation.start_time < reservation_data.end_time,
-            models.Reservation.end_time > reservation_data.start_time
-        )
-    ).first()
-
-    # Ako postoji preklapanje -> zabrani rezervaciju
-    if overlapping_reservation:
-        raise HTTPException(
-            status_code=409,
-            detail="This time slot is already reserved."
-        )
-
-    # Kreiranje rezervacije
-    new_reservation = models.Reservation(
-        start_time=reservation_data.start_time,
-        end_time=reservation_data.end_time,
-        user_id=reservation_data.user_id,
-        court_id=reservation_data.court_id,
-        status=models.ReservationStatus.active
-    )
-
-    session.add(new_reservation)
-    session.commit()
-    session.refresh(new_reservation)
-
-    return {
-        "message": "Reservation created successfully.",
-        "reservation": new_reservation
-    }
-
-
+# ================================================================
+# REZERVACIJE: PROCESUIRANJE I ASINKRONO SLANJE PRAVOG E-MAILA
+# ================================================================
 @app.post("/reservations/submit")
-def create_reservation_from_form(
+async def create_reservation_from_form(
     user_id: int = Form(...),
     court_id: int = Form(...),
     start_time: str = Form(...),
@@ -227,35 +169,30 @@ def create_reservation_from_form(
     session: Session = Depends(get_session)
 ):
     """
-    Prihvaća zahtjev za rezervaciju direktno s frontenda,
-    izvršava validaciju i vraća tekstualni status za JS modal.
+    Prihvaća zahtjev s frontenda, validira preklapanja, upisuje u bazu
+    te asinkrono šalje e-mail potvrdu korisniku.
     """
-    # Pretvaranje stringova iz HTML-a natrag u datetime objekte
     try:
         start_dt = datetime.fromisoformat(start_time)
         end_dt = datetime.fromisoformat(end_time)
     except ValueError:
         return PlainTextResponse("Nevažeći format datuma i vremena!", status_code=400)
 
-    # 1. Provjera postoji li korisnik
     user = session.get(models.User, user_id)
     if not user:
         return PlainTextResponse("Korisnik nije pronađen u bazi.", status_code=404)
 
-    # 2. Provjera postoji li teren
     court = session.get(models.Court, court_id)
     if not court:
         return PlainTextResponse("Teren nije pronađen u bazi.", status_code=404)
 
-    # 3. Provjera vremena
     if start_dt >= end_dt:
         return PlainTextResponse("Krajnje vrijeme mora biti nakon početnog vremena.", status_code=400)
 
-    # 4. Ne dopuštaj rezervacije u prošlosti
     if start_dt < datetime.utcnow():
         return PlainTextResponse("Nije moguće rezervirati termin u prošlosti.", status_code=400)
 
-    # 5. Provjera preklapanja termina
+    # Validacija preklapanja termina (TASK-06)
     overlapping_reservation = session.exec(
         select(models.Reservation).where(
             models.Reservation.court_id == court_id,
@@ -265,11 +202,10 @@ def create_reservation_from_form(
         )
     ).first()
 
-    # AKO JE ZAUZETO: Vraćamo grešku 409 što JS odmah prepoznaje i ispisuje upozorenje
     if overlapping_reservation:
         return PlainTextResponse("Ovaj termin je u međuvremenu već rezerviran!", status_code=409)
 
-    # 6. Kreiranje rezervacije u bazi
+    # 1. Kreiranje i spremanje rezervacije u bazu (POPRAVLJENO: commit se izvršava odmah ovdje)
     new_reservation = models.Reservation(
         start_time=start_dt,
         end_time=end_dt,
@@ -277,13 +213,158 @@ def create_reservation_from_form(
         court_id=court_id,
         status=models.ReservationStatus.active
     )
-
     session.add(new_reservation)
     session.commit()
 
-    # AKO JE USPJEŠNO: Vraćamo čisti "OK" sa statusom 200, što aktivira zeleni prozorčić na svijetli dio modala!
-    return PlainTextResponse("OK", status_code=200)
-# --- ADMIN: TERENI ---
+    # Formatiranje datuma i vremena za slanje u e-mailu
+    prikaz_vremena = f"{start_dt.strftime('%H:%M')} - {end_dt.strftime('%H:%M')}"
+    prikaz_datuma = start_dt.strftime('%d.%m.%Y')
+
+    # 2. TASK-11: Slanje profesionalno oblikovane HTML e-mail poruke korisniku
+    try:
+        html_sadrzaj = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+                    <h2 style="color: #2e7d32; border-bottom: 2px solid #2e7d32; padding-bottom: 10px;">🎾 Potvrda Rezervacije — TenisMaster</h2>
+                    <p>Pozdrav <strong>{user.username}</strong>,</p>
+                    <p>Uspješno ste rezervirali termin putem našeg sustava. Detalji rezervacije nalaze se u nastavku:</p>
+                    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                        <tr>
+                            <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Teren:</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #ddd;">{court.name} ({court.surface_type})</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Datum:</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #ddd;">{prikaz_datuma}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Vrijeme:</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #ddd;">{prikaz_vremena} h</td>
+                        </tr>
+                    </table>
+                    <p style="background: #f9f9f9; padding: 10px; border-left: 4px solid #2e7d32; font-size: 0.9em;">
+                        Ukoliko želite otkazati termin, molimo Vas da to učinite unutar korisničkog sučelja (Dashboard) na vrijeme.
+                    </p>
+                    <p style="margin-top: 30px; font-size: 0.85em; color: #777;">Ova poruka je generirana automatski, molimo ne odgovarajte na nju.</p>
+                </div>
+            </body>
+        </html>
+        """
+
+        poruka = MessageSchema(
+            subject="🎾 Potvrda rezervacije - TenisMaster",
+            recipients=[user.email],  # Šalje se na stvarnu e-mail adresu registriranog korisnika
+            body=html_sadrzaj,
+            subtype=MessageType.html
+        )
+
+        fm = FastMail(mail_conf)
+        await fm.send_message(poruka)  # Pokretanje asinkronog slanja u pozadini
+        email_status_msg = f"E-mail potvrda je poslana na {user.email}"
+    except Exception as e:
+        print(f"Greška pri slanju e-maila: {e}")
+        email_status_msg = "Rezervacija je osigurana, no e-mail potvrda trenutno nije mogla biti odaslana."
+
+    # Vraćamo OK status i tekst poruke koji JS prikazuje unutar modala uspjeha
+    return PlainTextResponse(f"OK|{email_status_msg}", status_code=200)
+
+
+# --- POMOĆNA LOGIKA: Generiranje 1-satnih slotova (TASK-09 Radno vrijeme) ---
+
+def get_free_slots(
+    court_id: int,
+    target_date: date,
+    session: Session,
+    slot_duration_minutes: int = 60,
+) -> list[dict]:
+    """Generira vremenske slotove prateći individualno radno vrijeme terena."""
+    court = session.get(models.Court, court_id)
+    if not court:
+        return []
+
+    day_start = datetime(target_date.year, target_date.month, target_date.day, court.open_hour, 0)
+    day_end   = datetime(target_date.year, target_date.month, target_date.day, court.close_hour, 0)
+    slot_delta = timedelta(minutes=slot_duration_minutes)
+
+    stmt = select(models.Reservation).where(
+        models.Reservation.court_id == court_id,
+        models.Reservation.status   == models.ReservationStatus.active,
+        models.Reservation.start_time >= day_start,
+        models.Reservation.start_time <  day_end,
+    )
+    existing: list[models.Reservation] = session.exec(stmt).all()
+
+    slots = []
+    current = day_start
+    while current + slot_delta <= day_end:
+        slot_end = current + slot_delta
+        is_taken = any(
+            r.start_time < slot_end and r.end_time > current
+            for r in existing
+        )
+        slots.append({
+            "start": current,
+            "end":   slot_end,
+            "free":  not is_taken,
+        })
+        current = slot_end
+
+    return slots
+
+
+@app.get("/reservations", response_class=HTMLResponse)
+def reservations_page(
+    request: Request,
+    username: str        = "Gost",
+    email: str           = "nepoznato",
+    user_id: Optional[int] = None,
+    is_admin: bool       = False,
+    date_filter: Optional[str] = None,
+    court_filter: Optional[int] = None,
+    session: Session     = Depends(get_session),
+):
+    """Prikazuje slobodne i zauzete rasporede prema odabranom datumu i terenu."""
+    courts = session.exec(
+        select(models.Court)
+        .where(models.Court.is_active == True)
+        .order_by(models.Court.id)
+    ).all()
+
+    if date_filter:
+        try:
+            target_date = date.fromisoformat(date_filter)
+        except ValueError:
+            target_date = date.today()
+    else:
+        target_date = date.today()
+
+    slots        = []
+    selected_court = None
+
+    if court_filter and courts:
+        selected_court = next((c for c in courts if c.id == court_filter), None)
+        if selected_court:
+            slots = get_free_slots(court_filter, target_date, session)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="reservations.html",
+        context={
+            "request":        request,
+            "username":       username,
+            "email":          email,
+            "user_id":        user_id,
+            "is_admin":       is_admin,
+            "courts":         courts,
+            "slots":          slots,
+            "target_date":    target_date.isoformat(),
+            "court_filter":   court_filter,
+            "selected_court": selected_court,
+        },
+    )
+
+# --- ADMIN: UPRAVLJANJE TERENIMA ---
 
 @app.get("/admin/courts", response_class=HTMLResponse)
 def admin_courts(
@@ -309,6 +390,8 @@ def create_court(
     user_id: int = Form(...),
     name: str = Form(...),
     surface_type: str = Form(...),
+    open_hour: int = Form(...),
+    close_hour: int = Form(...),
     is_active: Optional[str] = Form(None),
     session: Session = Depends(get_session)
 ):
@@ -316,6 +399,8 @@ def create_court(
     new_court = models.Court(
         name=name,
         surface_type=surface_type,
+        open_hour=open_hour,
+        close_hour=close_hour,
         is_active=bool(is_active)
     )
     session.add(new_court)
@@ -353,6 +438,8 @@ def update_court(
     user_id: int = Form(...),
     name: str = Form(...),
     surface_type: str = Form(...),
+    open_hour: int = Form(...),
+    close_hour: int = Form(...),
     is_active: Optional[str] = Form(None),
     session: Session = Depends(get_session)
 ):
@@ -362,6 +449,8 @@ def update_court(
         raise HTTPException(status_code=404, detail="Court not found.")
     court.name = name
     court.surface_type = surface_type
+    court.open_hour = open_hour
+    court.close_hour = close_hour
     court.is_active = bool(is_active)
     session.add(court)
     session.commit()
@@ -370,7 +459,7 @@ def update_court(
         status_code=status.HTTP_303_SEE_OTHER
     )
 
-# --- ADMIN: REZERVACIJE ---
+# --- ADMIN: PREGLED I OTKAZIVANJE REZERVACIJA ---
 
 @app.get("/admin/reservations", response_class=HTMLResponse)
 def admin_reservations(
@@ -430,127 +519,4 @@ def cancel_reservation(
     return RedirectResponse(
         url=f"/admin/reservations?user_id={user_id}",
         status_code=status.HTTP_303_SEE_OTHER
-    )
-
-    # ================================================================
-# ANTE GALIĆ — TASK-03, TASK-04 | FZ-01, FZ-02
-# Dodaj ove rute u main.py
-# ================================================================
-
-
-from typing import Optional
-from datetime import datetime, date, timedelta
-
-# ----------------------------------------------------------------
-# POMOĆNA FUNKCIJA: Generira listu slobodnih 1-satnih termina
-# za određeni dan i teren (TASK-03 / FZ-01)
-# ----------------------------------------------------------------
-
-def get_free_slots(
-    court_id: int,
-    target_date: date,
-    session: Session,
-    slot_duration_minutes: int = 60,
-    open_hour: int = 8,
-    close_hour: int = 22,
-) -> list[dict]:
-    """
-    FZ-01 / TASK-03:
-    Generira sve moguće termine (slotove) za zadani datum i teren,
-    a zatim izbacuje one koji se preklapaju s postojećim rezervacijama.
-
-    Vraća listu rječnika oblika:
-        {"start": datetime, "end": datetime, "free": bool}
-    """
-    # --- Postavljanje granica radnog vremena ---
-    day_start = datetime(target_date.year, target_date.month, target_date.day, open_hour, 0)
-    day_end   = datetime(target_date.year, target_date.month, target_date.day, close_hour, 0)
-    slot_delta = timedelta(minutes=slot_duration_minutes)
-
-    # --- Dohvati sve aktivne rezervacije za taj teren i datum ---
-    stmt = select(models.Reservation).where(
-        models.Reservation.court_id == court_id,
-        models.Reservation.status   == models.ReservationStatus.active,
-        models.Reservation.start_time >= day_start,
-        models.Reservation.start_time <  day_end,
-    )
-    existing: list[models.Reservation] = session.exec(stmt).all()
-
-    # --- Generiraj sve slotove i označi slobodne/zauzete ---
-    slots = []
-    current = day_start
-    while current + slot_delta <= day_end:
-        slot_end = current + slot_delta
-        # Provjeri preklapanje s postojećim rezervacijama
-        is_taken = any(
-            r.start_time < slot_end and r.end_time > current
-            for r in existing
-        )
-        slots.append({
-            "start": current,
-            "end":   slot_end,
-            "free":  not is_taken,
-        })
-        current = slot_end
-
-    return slots
-
-
-@app.get("/reservations", response_class=HTMLResponse)
-def reservations_page(
-    request: Request,
-    username: str        = "Gost",
-    email: str           = "nepoznato",
-    user_id: Optional[int] = None,
-    is_admin: bool       = False,
-    # Filteri (FZ-02)
-    date_filter: Optional[str] = None,   # npr. "2025-06-15"
-    court_filter: Optional[int] = None,
-    session: Session     = Depends(get_session),
-):
-    """
-    FZ-01: Prikazuje slobodne termine za odabrani datum.
-    FZ-02: Podržava filtriranje po datumu i terenu.
-    """
-
-    # --- Dohvati sve aktivne terene za filter dropdown ---
-    courts = session.exec(
-        select(models.Court)
-        .where(models.Court.is_active == True)
-        .order_by(models.Court.id)
-    ).all()
-
-    # --- Odredi datum (zadano: danas) ---
-    if date_filter:
-        try:
-            target_date = date.fromisoformat(date_filter)
-        except ValueError:
-            target_date = date.today()
-    else:
-        target_date = date.today()
-
-    # --- Dohvati slotove samo ako je teren odabran ---
-    slots        = []
-    selected_court = None
-
-    if court_filter and courts:
-        selected_court = next((c for c in courts if c.id == court_filter), None)
-        if selected_court:
-            slots = get_free_slots(court_filter, target_date, session)
-
-    return templates.TemplateResponse(
-        request=request,
-        name="reservations.html",
-        context={
-            "request":        request,
-            "username":       username,
-            "email":          email,
-            "user_id":        user_id,
-            "is_admin":       is_admin,
-            "courts":         courts,
-            "slots":          slots,
-            "target_date":    target_date.isoformat(),
-            "court_filter":   court_filter,
-            "selected_court": selected_court,
-        },
     )

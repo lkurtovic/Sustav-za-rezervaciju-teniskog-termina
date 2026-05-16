@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="hr">
+
 <head>
     <meta charset="UTF-8">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
     <title>Admin Courts</title>
 </head>
+
 <body class="container">
     <nav>
         <ul>
@@ -12,7 +14,8 @@
         </ul>
         <ul>
             <li>
-                <a href="/dashboard?username={{ admin_user.username }}&email={{ admin_user.email }}&is_admin=true&user_id={{ user_id }}" class="secondary">Dashboard</a>
+                <a href="/dashboard?username={{ admin_user.username }}&email={{ admin_user.email }}&is_admin=true&user_id={{ user_id }}"
+                    class="secondary">Dashboard</a>
             </li>
         </ul>
     </nav>
@@ -28,6 +31,14 @@
                 <label>Surface type
                     <input type="text" name="surface_type" required>
                 </label>
+                <div class="grid">
+                    <label>Open Hour (0-23)
+                        <input type="number" name="open_hour" min="0" max="23" value="8" required>
+                    </label>
+                    <label>Close Hour (0-23)
+                        <input type="number" name="close_hour" min="0" max="23" value="22" required>
+                    </label>
+                </div>
                 <label>
                     <input type="checkbox" name="is_active" checked>
                     Active
@@ -44,29 +55,33 @@
                         <th>ID</th>
                         <th>Name</th>
                         <th>Surface</th>
+                        <th>Working Hours</th>
                         <th>Active</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for court in courts %}
-                        <tr>
-                            <td>{{ court.id }}</td>
-                            <td>{{ court.name }}</td>
-                            <td>{{ court.surface_type }}</td>
-                            <td>{{ "yes" if court.is_active else "no" }}</td>
-                            <td>
-                                <a href="/admin/courts/{{ court.id }}/edit?user_id={{ user_id }}" role="button" class="secondary">Edit</a>
-                            </td>
-                        </tr>
+                    <tr>
+                        <td>{{ court.id }}</td>
+                        <td>{{ court.name }}</td>
+                        <td>{{ court.surface_type }}</td>
+                        <td>{{ court.open_hour }}:00 - {{ court.close_hour }}:00</td>
+                        <td>{{ "yes" if court.is_active else "no" }}</td>
+                        <td>
+                            <a href="/admin/courts/{{ court.id }}/edit?user_id={{ user_id }}" role="button"
+                                class="secondary">Edit</a>
+                        </td>
+                    </tr>
                     {% else %}
-                        <tr>
-                            <td colspan="5">No courts yet.</td>
-                        </tr>
+                    <tr>
+                        <td colspan="6">No courts yet.</td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </section>
     </main>
 </body>
+
 </html>
