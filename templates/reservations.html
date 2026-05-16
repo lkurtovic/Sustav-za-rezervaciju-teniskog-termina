@@ -162,16 +162,20 @@
                 <div class="slots-grid">
                     {% for slot in slots %}
                         {% if slot.free %}
-                            <!-- Slobodan slot — linkamo na rezervaciju (Ivo će implementirati POST) -->
-                            <a
-                                href="/reserve?court_id={{ court_filter }}&start={{ slot.start.strftime('%Y-%m-%dT%H:%M') }}&end={{ slot.end.strftime('%Y-%m-%dT%H:%M') }}&user_id={{ user_id }}&username={{ username }}&email={{ email }}"
-                                class="slot-card free"
-                                style="text-decoration:none;">
+                            <!-- Slobodan slot — Podaci spremljeni u data- atribute radi izbjegavanja grešaka s navodnicima -->
+                            <div class="slot-card free" 
+                                 data-court-id="{{ court_filter }}"
+                                 data-court-name="{{ selected_court.name }}"
+                                 data-start-prikaz="{{ slot.start.strftime('%H:%M') }}"
+                                 data-end-prikaz="{{ slot.end.strftime('%H:%M') }}"
+                                 data-start-iso="{{ slot.start.strftime('%Y-%m-%dT%H:%M:%S') }}"
+                                 data-end-iso="{{ slot.end.strftime('%Y-%m-%dT%H:%M:%S') }}"
+                                 onclick="otvoriModalSData(this)">
                                 <div class="slot-time">
                                     {{ slot.start.strftime('%H:%M') }} – {{ slot.end.strftime('%H:%M') }}
                                 </div>
                                 <div class="slot-label">✅ slobodno</div>
-                            </a>
+                            </div>
                         {% else %}
                             <div class="slot-card taken">
                                 <div class="slot-time">
@@ -190,7 +194,7 @@
             </section>
 
         {% elif court_filter %}
-            <!-- Teren odabran ali nema slotova (ne bi trebalo biti, ali sigurnost) -->
+            <!-- Teren odabran ali nema slotova -->
             <div class="empty-state">
                 <div class="icon">🎾</div>
                 <p>Nema podataka o terminima za ovaj teren.</p>
@@ -204,6 +208,123 @@
             </div>
         {% endif %}
     </main>
+
+    <!-- ====================================================
+         MODAL PROZOR (POP-UP) ZA REZERVACIJU
+         ==================================================== -->
+    <dialog id="modal-rezervacija">
+        <article>
+            <!-- Gumb X za zatvaranje u gornjem desnom kutu -->
+            <a href="#close" aria-label="Close" class="close" onclick="zatvoriModal()"></a>
+            
+            <!-- Prozor 1: Potvrda rezervacije -->
+            <div id="modal-sadrzaj-forma">
+                <h3>Potvrda rezervacije</h3>
+                <p>Želite li rezervirati <strong><span id="modal-teren-ime"></span></strong> u sljedećem terminu?</p>
+                <p style="font-size: 1.3rem; font-weight: bold; color: var(--primary); text-align: center; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 6px;">
+                    📅 <span id="modal-termin-vrijeme"></span> h
+                </p>
+                
+                <!-- Skrivena forma koja šalje podatke backendu u pozadini -->
+                <form id="forma-za-rezervaciju" onsubmit="posaljiRezervaciju(event)">
+                    <input type="hidden" name="user_id" value="{{ user_id }}">
+                    <input type="hidden" name="court_id" id="input-court-id">
+                    <input type="hidden" name="start_time" id="input-start-time">
+                    <input type="hidden" name="end_time" id="input-end-time">
+                    <input type="hidden" name="username" value="{{ username }}">
+                    <input type="hidden" name="email" value="{{ email }}">
+                    <input type="hidden" name="is_admin" value="{{ is_admin }}">
+                    
+                    <footer style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+                        <button type="button" class="secondary outline" onclick="zatvoriModal()" style="margin: 0;">Odustani</button>
+                        <button type="submit" style="margin: 0;">Potvrdi</button>
+                    </footer>
+                </form>
+            </div>
+
+            <!-- Prozor 2: Poruka o uspjehu (sakrivena na početku) -->
+            <div id="modal-sadrzaj-uspjeh" style="display: none; text-align: center; padding: 1rem 0;">
+                <h2 style="color: green; margin-bottom: 0.5rem;">🎾 Rezervacija uspješna!</h2>
+                <p>Uspješno ste rezervirali termin na terenu: <strong><span id="uspjeh-teren-ime"></span></strong>.</p>
+                <p style="margin-bottom: 1.5rem;">Vaš termin je osiguran u bazi podataka.</p>
+                <footer>
+                    <button type="button" onclick="zatvoriIDOsvjezi()" style="width: 100%; margin: 0;">Zatvori</button>
+                </footer>
+            </div>
+        </article>
+    </dialog>
+
+    <!-- ====================================================
+         JAVASCRIPT LOGIKA ZA UPRAVLJANJE MODALOM
+         ==================================================== -->
+    <script>
+        const modal = document.getElementById('modal-rezervacija');
+
+        function otvoriModalSData(element) {
+            // Sigurno dohvaćanje podataka iz HTML atributa elemenata
+            const courtId = element.getAttribute('data-court-id');
+            const courtName = element.getAttribute('data-court-name');
+            const startPrikaz = element.getAttribute('data-start-prikaz');
+            const endPrikaz = element.getAttribute('data-end-prikaz');
+            const startISO = element.getAttribute('data-start-iso');
+            const endISO = element.getAttribute('data-end-iso');
+
+            // Unesi vizualne podatke u modal
+            document.getElementById('modal-teren-ime').innerText = courtName;
+            document.getElementById('modal-termin-vrijeme').innerText = startPrikaz + ' – ' + endPrikaz;
+            
+            // Unesi vrijednosti u skrivena polja forme
+            document.getElementById('input-court-id').value = courtId;
+            document.getElementById('input-start-time').value = startISO;
+            document.getElementById('input-end-time').value = endISO;
+            
+            // Resetiraj modal na prvi korak (prikaži formu, sakrij uspjeh)
+            document.getElementById('modal-sadrzaj-forma').style.display = 'block';
+            document.getElementById('modal-sadrzaj-uspjeh').style.display = 'none';
+            
+            // Pico.css otvara modal dodavanjem 'open' atributa
+            modal.setAttribute('open', 'true');
+        }
+
+        function zatvoriModal() {
+            modal.removeAttribute('open');
+        }
+
+        function zatvoriIDOsvjezi() {
+            zatvoriModal();
+            // Ponovno učitavamo stranicu kako bi svježe rezervirani termin postao sivi/zauzet
+            window.location.reload();
+        }
+
+        function posaljiRezervaciju(event) {
+            event.preventDefault(); // Sprječava klasični reload stranice prilikom submitanja forme
+            
+            const forma = document.getElementById('forma-za-rezervaciju');
+            const formData = new FormData(forma);
+
+            // Šalje podatke na tvoj FastAPI endpoint u pozadini (AJAX)
+            fetch('/reservations/submit', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    const terenIme = document.getElementById('modal-teren-ime').innerText;
+                    document.getElementById('uspjeh-teren-ime').innerText = terenIme;
+                    
+                    // Sakrij formu i prebaci sadržaj modala na uspjeh
+                    document.getElementById('modal-sadrzaj-forma').style.display = 'none';
+                    document.getElementById('modal-sadrzaj-uspjeh').style.display = 'block';
+                } else {
+                    alert('Greška prilikom rezervacije. Moguće je da je termin u međuvremenu zauzet.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Došlo je do pogreške u komunikaciji s poslužiteljem.');
+            });
+        }
+    </script>
 
 </body>
 </html>
