@@ -18,15 +18,19 @@ class User(UserBase, table=True):
     hashed_password: str # NZ-03: Sigurno pohranjivanje lozinki
     is_admin: bool = Field(default=False) # Zadano je False
 
+    # Druga strana relacije se zove 'reservations'
     reservations: List["Reservation"] = Relationship(back_populates="user")
 
-# Tablica za teniske terene (TASK-01)
+# Tablica za teniske terene (TASK-01 + TASK-09 Radno vrijeme)
 class Court(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
     surface_type: str  # npr. zemlja, trava
     is_active: bool = Field(default=True)
+    open_hour: int = Field(default=8)   # TASK-09: Početak radnog vremena
+    close_hour: int = Field(default=22) # TASK-09: Kraj radnog vremena
 
+    # Druga strana relacije se zove 'reservations'
     reservations: List["Reservation"] = Relationship(back_populates="court")
 
 class ReservationStatus(str, Enum):
@@ -45,7 +49,10 @@ class Reservation(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id")
     court_id: int = Field(foreign_key="court.id")
 
+    # POPRAVLJENO: back_populates sada cilja 'reservations' unutar klase User
     user: User = Relationship(back_populates="reservations")
+    
+    # POPRAVLJENO: back_populates sada cilja 'reservations' unutar klase Court
     court: Court = Relationship(back_populates="reservations")
 
 # Model za kreiranje rezervacije (TASK-05)

@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="hr">
+
 <head>
     <meta charset="UTF-8">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
     <title>Edit Court</title>
 </head>
+
 <body class="container">
     <nav>
         <ul>
@@ -28,6 +30,14 @@
                 <label>Surface type
                     <input type="text" name="surface_type" value="{{ court.surface_type }}" required>
                 </label>
+                <div class="grid">
+                    <label>Open Hour (0-23)
+                        <input type="number" name="open_hour" min="0" max="23" value="{{ court.open_hour }}" required>
+                    </label>
+                    <label>Close Hour (0-23)
+                        <input type="number" name="close_hour" min="0" max="23" value="{{ court.close_hour }}" required>
+                    </label>
+                </div>
                 <label>
                     <input type="checkbox" name="is_active" {% if court.is_active %}checked{% endif %}>
                     Active
@@ -37,4 +47,5 @@
         </section>
     </main>
 </body>
+
 </html>
