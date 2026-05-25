@@ -41,8 +41,33 @@ mail_conf = ConnectionConfig(
 def on_startup():
     create_db_and_tables()
     ensure_schema()
+    
     with Session(engine) as session:
-        # Inicijalno dodavanje terena ako baza ima praznu tablicu
+        # 1. STVARANJE ADMINA (ako ne postoji)
+        admin_user = session.exec(select(models.User).where(models.User.email == "admin@gmail.com")).first()
+        if not admin_user:
+            admin_user = models.User(
+                username="admin",
+                email="admin@gmail.com",
+                hashed_password=auth.hash_password("admin"),
+                is_admin=True
+            )
+            session.add(admin_user)
+            print("🚀 Početni ADMIN račun uspješno stvoren!")
+
+        # 2. STVARANJE OBIČNOG KORISNIKA (ako ne postoji)
+        regular_user = session.exec(select(models.User).where(models.User.email == "korisnik@gmail.com")).first()
+        if not regular_user:
+            regular_user = models.User(
+                username="korisnik",
+                email="korisnik@gmail.com",
+                hashed_password=auth.hash_password("korisnik"),
+                is_admin=False
+            )
+            session.add(regular_user)
+            print("🚀 Početni KORISNIK račun uspješno stvoren!")
+
+        # 3. STVARANJE POČETNOG TERENA (ako tablica terena nema niti jedan zapis)
         if not session.exec(select(models.Court)).first():
             court = models.Court(
                 name="Centralni teren",
@@ -52,7 +77,10 @@ def on_startup():
                 close_hour=22
             )
             session.add(court)
-            session.commit()
+            print("🎾 Početni TENISKI TEREN uspješno stvoren!")
+
+        # Spremi sve promjene u bazu odjednom
+        session.commit()
 
 def require_admin(user_id: Optional[int], session: Session) -> models.User:
     if user_id is None:
