@@ -60,7 +60,7 @@ def on_startup():
         if not regular_user:
             regular_user = models.User(
                 username="korisnik",
-                email="korisnik@gmail.com",
+                email="luka0kurtovic@gmail.com",
                 hashed_password=auth.hash_password("korisnik"),
                 is_admin=False
             )
