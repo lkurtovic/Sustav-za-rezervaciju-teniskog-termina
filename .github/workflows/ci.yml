@@ -1,0 +1,43 @@
+name: CI i Statička Provjera
+
+# Tijek rada se pokreće na svaki push ili pull request na glavnu granu
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Povuci kod iz repozitorija
+    - name: Preuzimanje koda
+      uses: actions/checkout@v4
+
+    # 2. Postavi Python okruženje
+    - name: Postavljanje Python verzije
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11' # Stabilna verzija za CI provjere
+
+    # 3. Instaliraj sve potrebne pakete i alate za testiranje
+    - name: Instalacija ovisnosti
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    # 4. Statička provjera koda (Kriterij A5: lint/format)
+    # Provjerava sintaktičke greške i bazični stil koda
+    - name: Pokretanje lintera (Flake8)
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings.
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    # 5. Pokretanje testova (Kriterij A5: testovi na push/PR)
+    - name: Pokretanje pytest testova
+      run: |
+        pytest -v
